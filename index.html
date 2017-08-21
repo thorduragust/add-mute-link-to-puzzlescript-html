@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Add mute link</title>
+        <style>
+        </style>
+
+        <script type="text/javascript">
+        	window.onload = function() {
+        		var reader = new FileReader();
+        		var file;
+        		var fileName;
+
+        		document.getElementById("input").onchange = function() {
+        			reader.readAsBinaryString(this.files[0]);
+        			fileName = this.files[0].name;
+        		}
+
+        		document.getElementById("downloadLink").onclick = function() {
+        			if(document.getElementById("input").files[0] == null) alert("you have not selected any file!");
+        		}
+
+        		reader.onloadend = function() {
+        			file = reader.result;
+        			var sourceCodeLocation = file.search("var sourceCode=");
+
+        			if(sourceCodeLocation == -1) {
+        				alert("this is not a valid puzzlescript file!");
+        				return;
+        			}
+
+        			var source = file.substring(sourceCodeLocation, file.length);
+        			var startIndex = source.search("youtube") + 7;
+
+        			if(startIndex == 6) {//-1 í search + 7
+        				alert("this puzzlescript file has no youtube link!");
+        				return;
+        			}
+
+        			var index = startIndex;
+        			var youtubeId;
+
+        			while(true) {
+        				if(source[index] == '\\') {
+        					youtubeId = source.substring(startIndex+1, index);
+        					break;
+        				}
+
+        				index++;
+        			}
+
+        			source = source.replace(source.substring(startIndex-7, index+2), ""); //7:youtube 2:\n
+        			file = file.substring(0, sourceCodeLocation) + source;
+
+                    var bodyLocation = file.search("<body>") + 6;
+                    file = file.substring(0, bodyLocation) + "<div id=\"youtubePlayer\"><\/div>" + file.substring(bodyLocation, file.length);
+
+        			var footerLocation = file.search("<div class=\"footer\">");
+                    while(file[footerLocation] != '<' || file[footerLocation+1] != '/' || file[footerLocation+2] != 'd') footerLocation++;
+
+                    file = file.substring(0, footerLocation) + " <a href=\"#\" id=\"muteLink\" style=\"margin-left:10px;\">Mute Music</a>" + file.substring(footerLocation, file.length);
+
+                    var codeString = "<style>#youtubePlayer {    visibility: hidden;    width: 500px;    height: 500px;    position: absolute;    top: -10000px;    left: -10000px;}</style><script type=\"text/javascript\">var player;    var playerMuted = false;    var tag = document.createElement(\'script\');    tag.src = \"https://www.youtube.com/iframe_api\";    var firstScriptTag = document.getElementsByTagName(\'script\')[0];    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);    function onYouTubeIframeAPIReady() {        player = new YT.Player(\'youtubePlayer\', {            videoId: \'" + youtubeId + "\',            height: \'500\',            width: \'500\',            events: {                \'onReady\': onPlayerReady,                \'onStateChange\': onPlayerStateChange            },            playerVars: {                \'enablejsapi\':1,                \'autoplay\':1,            }        });    }    function onPlayerReady() {        player.playVideo();        player.setLoop(true);    }    function onPlayerStateChange(event) {        if(event.data == YT.PlayerState.ENDED) {           player.seekTo(0);        }    }    function toggleMusic() {        if(playerMuted) {        console.log(\"unmuting player\");            player.unMute();            document.getElementById(\"muteLink\").innerHTML = \"Mute Music\";            playerMuted = false;        }else {        console.log(\"muting player\");            player.mute();            document.getElementById(\"muteLink\").innerHTML = \"Unmute Music\";            playerMuted = true;        }        try {            if(window.localStorage) {                localStorage[document.URL + \"playerMuted\"] = playerMuted;                console.log(\"playerMuted set as \" + playerMuted);            }        }catch (e) {}                lastDownTarget = canvas;    }    window.onload = function() {    try {        if(window.localStorage) {        playerMuted = (localStorage[document.URL + \"playerMuted\"] == \"true\") ? false : true;            console.log(\"playerMuted? \" + playerMuted);            toggleMusic();        }        }catch (e) {}        document.getElementById(\"muteLink\").onclick = function(e) {            e.preventDefault();            toggleMusic();        }    }<\/script>";
+                    file = file.substring(0, file.search("</head>")) + codeString + file.substring(file.search("</head>"), file.length);
+
+
+        			var downloadLink = document.getElementById("downloadLink");
+        			downloadLink.setAttribute("href", "data:text/plain;charset=UTF-8," + encodeURIComponent(file));
+        			downloadLink.setAttribute("download", fileName);
+        		}
+        	}
+        </script>
+    </head>
+
+    <body>
+        <h2>Browse to your exported puzzlescript file:</h2>
+        <table>
+	        <tr>
+	        	<td><input id="input" type="file"></td>
+	        </tr>
+	        <tr>
+	        	<td>
+	        		<a id="downloadLink"><button style="margin-top: 20px;">add link!</button></a>
+	        	</td>
+	        </tr>
+        </table>
+    </body>
+
+</html>
